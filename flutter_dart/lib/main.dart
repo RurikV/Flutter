@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'math_expression_interpreter.dart';
 
 void main() {
   runApp(const MyApp());
@@ -7,45 +8,20 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Math Expression Interpreter',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Math Expression Interpreter'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
 
   final String title;
 
@@ -54,69 +30,119 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  final TextEditingController _expressionController = TextEditingController();
+  final TextEditingController _variableController = TextEditingController();
+  String _result = '';
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  void _evaluateExpression() {
+    try {
+      final expression = _expressionController.text;
+      final variableText = _variableController.text;
+
+      // Parse variables
+      final Map<String, double> variables = {};
+      if (variableText.isNotEmpty) {
+        final variablePairs = variableText.split(',');
+        for (final pair in variablePairs) {
+          final keyValue = pair.split('=');
+          if (keyValue.length == 2) {
+            final key = keyValue[0].trim();
+            final value = double.tryParse(keyValue[1].trim());
+            if (value != null) {
+              variables[key] = value;
+            }
+          }
+        }
+      }
+
+      // Evaluate the expression
+      final interpreter = MathExpressionInterpreter(expression);
+      final result = interpreter.evaluate(variables);
+
+      setState(() {
+        _result = 'Result: $result';
+      });
+    } catch (e) {
+      setState(() {
+        _result = 'Error: ${e.toString()}';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const Text('You have pushed the button this many times:'),
+            TextField(
+              controller: _expressionController,
+              decoration: const InputDecoration(
+                labelText: 'Enter mathematical expression',
+                hintText: 'Example: 10*5+4/2-1',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _variableController,
+              decoration: const InputDecoration(
+                labelText: 'Enter variables (optional)',
+                hintText: 'Example: x=10, y=5',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _evaluateExpression,
+              child: const Text('Evaluate'),
+            ),
+            const SizedBox(height: 16),
             Text(
-              '$_counter',
+              _result,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
+            const SizedBox(height: 32),
+            const Text(
+              'Test Cases:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            const SizedBox(height: 8),
+            _buildTestCase('10*5+4/2-1', {}, 51),
+            _buildTestCase('(x*3-5)/5', {'x': 10}, 5),
+            _buildTestCase('3*x+15/(3+2)', {'x': 10}, 33),
+            _buildTestCase('2*(3+4*(5-1))', {}, 38),
+            _buildTestCase('-5+10', {}, 5),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+
+  Widget _buildTestCase(String expression, Map<String, double> variables, double expectedResult) {
+    final interpreter = MathExpressionInterpreter(expression);
+    final actualResult = interpreter.evaluate(variables);
+    final isCorrect = (actualResult - expectedResult).abs() < 0.0001;
+
+    String variablesText = '';
+    if (variables.isNotEmpty) {
+      variablesText = ' with ${variables.entries.map((e) => '${e.key}=${e.value}').join(', ')}';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Text(
+        '$expression$variablesText = $actualResult (Expected: $expectedResult) ${isCorrect ? '✓' : '✗'}',
+        style: TextStyle(
+          color: isCorrect ? Colors.green : Colors.red,
+        ),
+      ),
     );
   }
 }
