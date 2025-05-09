@@ -1,4 +1,4 @@
-import '../lib/math_expression_interpreter.dart';
+import 'package:flutter_dart/math_expression_interpreter.dart';
 
 void main() {
   print('Testing MathExpressionInterpreter');
